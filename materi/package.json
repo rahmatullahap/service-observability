@@ -41,6 +41,8 @@
   },
   "dependencies": {
     "@reduxjs/toolkit": "^1.5.0",
+    "@sentry/tracing": "^6.1.0",
+    "@sentry/vue": "^6.1.0",
     "nodemon": "^2.0.7",
     "pg": "^8.5.1",
     "rc": "^1.2.8",
