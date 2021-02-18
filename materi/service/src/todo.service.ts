@@ -11,6 +11,8 @@ import {
   ERROR_TODO_NOT_FOUND,
 } from './todo';
 import { IncomingMessage, ServerResponse } from 'http';
+import { AppContext } from './lib/context';
+import { FORMAT_HTTP_HEADERS } from 'opentracing';
 
 /**
  * service to get list of todos
@@ -41,32 +43,64 @@ export async function listSvc(
  */
 export async function addSvc(
   req: IncomingMessage,
-  res: ServerResponse
+  res: ServerResponse,
+  ctx: AppContext
 ): Promise<void> {
   let data = '';
   req.on('data', (chunk) => {
     data += chunk;
   });
   req.on('end', async () => {
+    const httpSpan = ctx.tracer.extract(FORMAT_HTTP_HEADERS, req.headers);
+    const parentSpan = ctx.tracer.startSpan('post_add', {
+      childOf: httpSpan,
+    });
+
+    const span = ctx.tracer.startSpan('parsing_task', { childOf: parentSpan });
     const body = JSON.parse(data); // 'Buy the milk'
     if (!body.task) {
+      span.setTag('error', true);
+      span.log({
+        event: 'error get task',
+        message: 'parameter tidak lengkap',
+      });
       res.statusCode = 400;
       res.write(ERROR_ADD_DATA_INVALID);
       res.end();
+      span.finish();
+      parentSpan.finish();
       return;
     }
+    const span2 = ctx.tracer.startSpan('write_task_on_db', {
+      childOf: parentSpan,
+    });
+    const span3 = ctx.tracer.startSpan('encode_result', {
+      childOf: parentSpan,
+    });
     try {
       const todo = await add(body);
+      span2.finish();
       res.setHeader('content-type', 'application/json');
       res.statusCode = 200;
       res.write(JSON.stringify(todo));
       res.end();
+      span3.finish();
     } catch (err) {
+      span2.setTag('error', true);
+      span2.log({
+        event: 'error add task',
+        message: err.message,
+      });
+      span2.finish();
+      ctx.logger.error(err.message);
       res.statusCode = 500;
       res.write(JSON.stringify(err.message || err));
       res.end();
+      span3.finish();
+      parentSpan.finish();
       return;
     }
+    parentSpan.finish();
   });
 }
 

@@ -7,20 +7,29 @@ import { TodoSchema } from './todo.model';
 import { config } from './config';
 import { createNodeLogger, LogLevel } from './lib/logger';
 import { Logger } from 'winston';
+import { createTracer } from './lib/tracer';
+import { JaegerTracer } from 'jaeger-client';
+import { AppContext } from './lib/context';
 
-let logger: Logger = null;
+let ctx: AppContext = null;
+
 /**
  * intiate database connection
  */
 async function init(): Promise<void> {
-  logger = createNodeLogger(LogLevel.info);
+  const logger: Logger = createNodeLogger(LogLevel.info);
+  const tracer: JaegerTracer = createTracer('todo-service');
+  ctx = {
+    logger,
+    tracer,
+  };
   try {
-    logger.info('connect to database');
+    ctx.logger.info('connect to database');
     await connect([TodoSchema], config.database);
     // throw Error('gagal');
-    logger.info('database connected');
+    ctx.logger.info('database connected');
   } catch (err) {
-    logger.error('database connection failed');
+    ctx.logger.error('database connection failed');
     process.exit(1);
   }
 }
@@ -51,7 +60,7 @@ const server = createServer((req: IncomingMessage, res: ServerResponse) => {
   switch (true) {
     case uri.pathname === '/add':
       if (method === 'POST') {
-        addSvc(req, res);
+        addSvc(req, res, ctx);
       } else {
         message = 'Method tidak tersedia';
         respond();

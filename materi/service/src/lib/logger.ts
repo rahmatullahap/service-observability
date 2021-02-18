@@ -11,7 +11,7 @@ export enum LogLevel {
 }
 
 export function createNodeLogger(level: LogLevel): Logger {
-  const myFormat = format.printf(({ level, message, label, timestamp }) => {
+  const myFormat = format.printf(({ level, message, timestamp }) => {
     return `${timestamp} ${level}: ${message}`;
   });
   const logger = createLogger({
