@@ -11,14 +11,17 @@ export enum LogLevel {
 }
 
 export function createNodeLogger(level: LogLevel): Logger {
+  const myFormat = format.printf(({ level, message, label, timestamp }) => {
+    return `${timestamp} ${level}: ${message}`;
+  });
   const logger = createLogger({
     level: level || 'info',
-    format: format.json(),
+    format: format.combine(format.timestamp(), myFormat),
     defaultMeta: { service: 'todo-service' },
     transports: [
       new transports.File({ filename: 'error.log', level: 'error' }),
       new transports.Console({
-        format: format.simple(),
+        format: format.combine(format.timestamp(), myFormat),
         level: 'info',
       }),
     ],

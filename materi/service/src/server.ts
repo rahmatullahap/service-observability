@@ -17,6 +17,7 @@ async function init(): Promise<void> {
   try {
     logger.info('connect to database');
     await connect([TodoSchema], config.database);
+    // throw Error('gagal');
     logger.info('database connected');
   } catch (err) {
     logger.error('database connection failed');
